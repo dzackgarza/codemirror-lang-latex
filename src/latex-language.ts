@@ -12,6 +12,7 @@ import { linter } from '@codemirror/lint';
 import { closeBrackets } from '@codemirror/autocomplete';
 import { mathCloseBrackets } from './math-close-brackets';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import type { CompletionSource } from '@codemirror/autocomplete';
 
 import { latexCompletionSource } from './completion';
 import { autoCloseTags } from './auto-close-tags';
@@ -304,7 +305,15 @@ export function latex(config: {
   enableAutocomplete?: boolean,
   autoCloseBrackets?: boolean,
   fileName?: string,
-  linter?: LatexLinterOptions
+  linter?: LatexLinterOptions,
+  // Additional app completion sources to COMPOSE with the LaTeX source. In CM6
+  // `override` replaces the whole source list, so a second autocompletion() call
+  // or a languageData.autocomplete source would be suppressed. To let app
+  // sources coexist with LaTeX command completion, they are folded into the SAME
+  // override list here — LaTeX FIRST, then the extras — so every source is
+  // consulted on each completion query. The host can pass a single delegating
+  // source backed by a mutable registry to add sources at runtime.
+  extraCompletionSources?: readonly CompletionSource[]
 } = {}): LanguageSupport {
   const options = {
     ...config,
@@ -314,7 +323,8 @@ export function latex(config: {
     enableAutocomplete: config.enableAutocomplete ?? true,
     autoCloseBrackets: config.autoCloseBrackets ?? true,
     fileName: config.fileName ?? '',
-    linter: config.linter ?? {}
+    linter: config.linter ?? {},
+    extraCompletionSources: config.extraCompletionSources ?? []
   };
 
   const extensions = [];
@@ -330,10 +340,14 @@ export function latex(config: {
   extensions.push(foldService.of(sectionFoldRanges));
   extensions.push(markdownFoldService);
 
-  // Add autocomplete extension
+  // Add autocomplete extension. The LaTeX source stays FIRST; app-provided
+  // sources are appended so they COMPOSE with it rather than displace it.
   if (options.enableAutocomplete) {
     extensions.push(autocompletion({
-      override: [latexCompletionSource(options.autoCloseTags)],
+      override: [
+        latexCompletionSource(options.autoCloseTags),
+        ...options.extraCompletionSources
+      ],
       defaultKeymap: true,
       activateOnTyping: true,
       icons: true
