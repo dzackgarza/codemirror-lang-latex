@@ -20,13 +20,46 @@ import { EditorView } from '@codemirror/view';
  * Decide the auto-close transaction for `insert` typed at the current
  * selection, or null to let the stock close-bracket handling run.
  *
- * STUB: handles nothing yet (the math delimiters are reported as not
- * auto-closing). The fix replaces this body.
+ * Handles only a plain cursor (no range selection). Defers (returns null) for
+ * everything it does not own, so stock bracket-closing still serves `(`/`[`/`{`
+ * outside math.
  */
 export function mathInsertBracket(
-  _state: EditorState,
-  _insert: string,
+  state: EditorState,
+  insert: string,
 ): Transaction | null {
+  const sel = state.selection.main;
+  if (!sel.empty) return null;
+  const pos = sel.from;
+
+  // `$`: insert a matching `$` and sit between them. On an empty line this
+  // opens inline math `$|$`; typing `$` again inside that pair applies the same
+  // operation one level deeper, extending it to display math `$$|$$`.
+  if (insert === '$') {
+    return state.update({
+      changes: { from: pos, insert: '$$' },
+      selection: { anchor: pos + 1 },
+      scrollIntoView: true,
+      userEvent: 'input.type',
+    });
+  }
+
+  // `\(` / `\[`: only when the typed bracket immediately follows a backslash,
+  // so the closer is the two-character `\)` / `\]` (the stock single-char
+  // handler would close with a bare `)` / `]`, yielding `\()` / `\[]`).
+  if (insert === '(' || insert === '[') {
+    const before = pos > 0 ? state.sliceDoc(pos - 1, pos) : '';
+    if (before === '\\') {
+      const close = insert === '(' ? '\\)' : '\\]';
+      return state.update({
+        changes: { from: pos, insert: insert + close },
+        selection: { anchor: pos + 1 },
+        scrollIntoView: true,
+        userEvent: 'input.type',
+      });
+    }
+  }
+
   return null;
 }
 
