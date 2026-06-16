@@ -1,5 +1,6 @@
 // src/completion.ts
-import { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { Completion, CompletionContext, CompletionResult, snippetCompletion } from '@codemirror/autocomplete';
+import { pandocDivEnvironments, divFenceSnippet } from './pandoc-markdown';
 
 // Checks if we're at the beginning of an environment name within a \begin{} or \end{}
 function isInEnvironmentName(context: CompletionContext): boolean {
@@ -379,6 +380,24 @@ export const snippets: readonly Completion[] = [
 // Main completion function that provides autocomplete suggestions based on context
 export function latexCompletionSource(autoCloseTagsEnabled: boolean) {
   return function (context: CompletionContext): CompletionResult | null {
+    // Pandoc fenced-div environments: typing `::`/`:::` at the start of a line
+    // offers div completions that expand to a `:::{.env} … :::` block. Checked
+    // before the backslash gate below so the colon trigger is reachable.
+    const fence = context.matchBefore(/:{2,}/);
+    if (fence && fence.from === context.state.doc.lineAt(context.pos).from) {
+      return {
+        from: fence.from,
+        options: pandocDivEnvironments.map(env =>
+          snippetCompletion(divFenceSnippet(env), {
+            label: env,
+            type: 'class',
+            detail: 'fenced div'
+          })
+        ),
+        validFor: /^:+$/
+      };
+    }
+
     // Broaden the matching pattern for better detection
     if (!context.explicit) {
       const before = context.matchBefore(/\\[a-zA-Z]*$|\\(begin|end)\{[a-zA-Z]*$/);

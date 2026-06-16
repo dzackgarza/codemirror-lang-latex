@@ -57,6 +57,21 @@ export const markdownFoldService = foldService.of(
 const CLASS_ATTR_RE = /\.([A-Za-z][\w-]*)/; // first `.class` in a div attr spec
 const TITLE_ATTR_RE = /title="([^"]*)"/; // a div `title="…"` attribute
 
+// Curated environments offered when completing a fenced div (the markdown
+// analogue of `\begin{env}` completion). Fenced-div classes are arbitrary, but
+// these theorem-like / admonition environments are the ones worth suggesting.
+export const pandocDivEnvironments: readonly string[] = [
+  'theorem', 'lemma', 'corollary', 'proposition', 'definition',
+  'example', 'proof', 'remark', 'claim', 'conjecture',
+  'exercise', 'solution', 'note', 'warning',
+];
+
+// Snippet template a div completion expands to: a fenced div with a single tab
+// field (`${}`) in the body and the matching close fence below.
+export function divFenceSnippet(env: string): string {
+  return `:::{.${env}}\n\${}\n:::`;
+}
+
 export interface OutlineItem {
   kind: 'heading' | 'div';
   level: number; // heading level (1–6), or the div's nesting level (1+)
