@@ -20,7 +20,8 @@
     "build:example": "cd example/webpack-bundled-example && npm install",
     "build:pages-example": "npm run update-permissions && node scripts/setup-pages-example.cjs",
     "example": "cd example/webpack-bundled-example && npm start",
-    "pages-example": "cd example/github-pages-example && npm start"
+    "pages-example": "cd example/github-pages-example && npm start",
+    "test": "bun run generate-parser && bun test test/"
   },
   "peerDependencies": {
     "@codemirror/autocomplete": "^6.20.1",

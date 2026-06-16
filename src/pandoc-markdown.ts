@@ -6,7 +6,40 @@
 // prose, via parseMixed. No markdown is reimplemented here.
 import { parseMixed } from '@lezer/common';
 import type { SyntaxNodeRef } from '@lezer/common';
+import type { MarkdownConfig, MarkdownParser, BlockContext, Line } from '@lezer/markdown';
+import { tags as t } from '@lezer/highlight';
 import { markdownLanguage } from '@codemirror/lang-markdown';
+
+const COLON = 58; // ':'
+
+// Pandoc fenced divs (`:::` / `:::{.remark}` … `:::`): a line of 3+ colons opens,
+// a line of 3+ colons closes. Each fence line is marked as a DivFence; the
+// content between stays normal markdown (parsed by the surrounding block
+// context), so nested constructs keep highlighting.
+const FencedDiv: MarkdownConfig = {
+  defineNodes: [{ name: 'DivFence', style: t.processingInstruction }],
+  parseBlock: [
+    {
+      name: 'DivFence',
+      parse(cx: BlockContext, line: Line): boolean {
+        if (line.next !== COLON) return false;
+        let i = line.pos;
+        let n = 0;
+        while (line.text.charCodeAt(i) === COLON) {
+          i++;
+          n++;
+        }
+        if (n < 3) return false;
+        const from = cx.lineStart + line.pos;
+        cx.addElement(cx.elt('DivFence', from, cx.lineStart + line.text.length));
+        cx.nextLine();
+        return true;
+      },
+    },
+  ],
+};
+
+const markdownParser = (markdownLanguage.parser as MarkdownParser).configure([FencedDiv]);
 
 // Node names the LaTeX grammar emits for text it passes through verbatim — the
 // runs where markdown applies. Hash ("#") is added by the grammar so ATX
@@ -21,6 +54,7 @@ const PROSE_NODES = new Set([
   'Tilde',
   'Ampersand',
   'Hash',
+  'Underscore',
 ]);
 
 // LaTeX constructs whose interior must stay LaTeX (holes in the markdown
@@ -47,7 +81,5 @@ function isProse(n: SyntaxNodeRef): boolean {
 // constructs are holes, so math/commands/environments keep LaTeX highlighting
 // while prose gets full markdown highlighting.
 export const markdownProseWrap = parseMixed((node) =>
-  node.name === 'LaTeX'
-    ? { parser: markdownLanguage.parser, overlay: isProse }
-    : null,
+  node.name === 'LaTeX' ? { parser: markdownParser, overlay: isProse } : null,
 );

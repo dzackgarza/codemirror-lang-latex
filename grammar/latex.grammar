@@ -164,6 +164,7 @@
     Ampersand { "&" }
     Tilde { "~" }
     Hash { "#" }
+    Underscore { "_" }
 
     EnvName {  $[a-zA-Z]+ $[*]? }
 }
@@ -465,6 +466,7 @@ textBase {
     | Ampersand
     | Tilde
     | Hash
+    | Underscore
     )
 }
 
@@ -529,7 +531,7 @@ LongArg {
     | KnownEnvironment
     | Environment
     | BlankLine
-    | "_" | "^" // other math chars
+    | "^" // other math chars
     )*
 }
 
@@ -540,21 +542,20 @@ ShortTextArgument {
 ShortArg {
     ( textWithBrackets
     | NonEmptyGroup<ShortArg>
-    | "_" | "^" // other math chars
+    | "^" // other math chars
     )*
 }
 
 ShortOptionalArg {
     ( textBase
     | NonEmptyGroup<ShortOptionalArg>
-    | "_" // underscore is used in some parameter names
     )*
 }
 
 TikzPictureContent {  /// same as Text but with added allowed characters
     ( textWithEnvironmentsAndBlankLines
     | NonEmptyGroup<TikzPictureContent>
-    | "_" | "^" // other math chars
+    | "^" // other math chars
     )+
 }
 
@@ -579,7 +580,7 @@ DefinitionFragment {
     | Hash // macro character
     | Ampersand // for tables
     | Tilde // unbreakable space
-    | "_" | "^" // other math chars
+    | Underscore | "^" // other math chars
     | SectioningCommand<
         BookCtrlSeq |
         PartCtrlSeq |
