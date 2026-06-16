@@ -1,6 +1,10 @@
 import { test, expect } from 'bun:test';
 import { highlightTree, classHighlighter } from '@lezer/highlight';
+import { EditorState } from '@codemirror/state';
+import { CompletionContext } from '@codemirror/autocomplete';
 import { latexLanguage } from '../src/latex-language';
+import { latexLinter } from '../src/linter';
+import { latexCompletionSource } from '../src/completion';
 
 const parser = latexLanguage.parser;
 
@@ -64,7 +68,44 @@ test('fenced div fence is recognised and marked', () => {
   expect(classesAt('intro\n\n:::note\ndivcontent\n:::\n', ':::')).not.toBe('');
 });
 
-// ── Genuine grammar gap (RED until the '_' passthrough token is added).
+// ── Underscore emphasis (the '_' passthrough token).
 test('underscore emphasis is highlighted', () => {
   expect(classesAt('a _emunder_ b\n', 'emunder')).toContain('emphasis');
+});
+
+// ── Fenced divs stand in for environments: their internals parse as full latex
+// (raw commands, math) just like outside, including when nested — so a lemma in
+// a proof highlights correctly.
+test('fenced div internals parse as full latex, including nested divs', () => {
+  const doc = ':::lemma\n\\textbf{bold} and $x^2$ here\n\n:::proof\ninner \\alpha text\n:::\n:::\n';
+  expect(classesAt(doc, '\\textbf')).toContain('strong'); // latex command inside div
+  expect(classesAt(doc, 'x^2')).not.toBe(''); // math inside div
+  expect(classesAt(doc, '\\alpha')).toContain('keyword'); // latex inside NESTED div
+});
+
+// ── The latex linter must not false-positive on a normal pandoc-markdown
+// document (no \documentclass, markdown prose, inline math) — proving the editor
+// is usable for latex-in-markdown, not just pure .tex.
+test('linter does not flag a normal pandoc-markdown document', () => {
+  const doc =
+    '# Heading\n\nProse with *emphasis*, a [link](http://u), and $\\zeta(2) = \\pi^2/6$.\n\n- item one\n- item two\n\n:::note\nA remark with $x^2$.\n:::\n';
+  const state = EditorState.create({ doc, extensions: [latexLanguage] });
+  const diagnostics = latexLinter({ checkMissingDocumentEnv: false })(
+    { state } as never,
+  );
+  expect(diagnostics).toEqual([]);
+});
+
+// ── Command completion offers latex commands AND snippets (Overleaf-parity
+// authoring aid), so the autocomplete feature is wired with content.
+test('completion offers latex commands and snippets', () => {
+  const doc = '\\beg';
+  const state = EditorState.create({ doc, extensions: [latexLanguage] });
+  const result = latexCompletionSource(true)(
+    new CompletionContext(state, doc.length, true),
+  );
+  expect(result).not.toBeNull();
+  const labels = (result!.options ?? []).map((o) => o.label);
+  // the \begin{...} snippet is among the offered completions
+  expect(labels.some((l) => l.includes('begin'))).toBe(true);
 });
