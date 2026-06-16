@@ -12,10 +12,11 @@ import { markdownLanguage } from '@codemirror/lang-markdown';
 
 const COLON = 58; // ':'
 
-// Pandoc fenced divs (`:::` / `:::{.remark}` … `:::`): a line of 3+ colons opens,
-// a line of 3+ colons closes. Each fence line is marked as a DivFence; the
-// content between stays normal markdown (parsed by the surrounding block
-// context), so nested constructs keep highlighting.
+// Pandoc fenced divs — `:::{.theorem}` opens (3+ colons), a line of 3+ colons
+// closes. We mark the colon fence as a DivFence; the content between (including a
+// `{.theorem}` attribute group, which the host latex grammar parses as a brace
+// group) stays normal markdown/latex, so a div's internals — raw commands, math,
+// nested divs — keep highlighting exactly like the surrounding document.
 const FencedDiv: MarkdownConfig = {
   defineNodes: [{ name: 'DivFence', style: t.processingInstruction }],
   parseBlock: [
@@ -31,7 +32,7 @@ const FencedDiv: MarkdownConfig = {
         }
         if (n < 3) return false;
         const from = cx.lineStart + line.pos;
-        cx.addElement(cx.elt('DivFence', from, cx.lineStart + line.text.length));
+        cx.addElement(cx.elt('DivFence', from, cx.lineStart + i));
         cx.nextLine();
         return true;
       },

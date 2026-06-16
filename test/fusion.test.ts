@@ -63,9 +63,13 @@ test('strikethrough is recognised and its delimiters marked', () => {
   expect(classesAt('a ~~strikex~~ b\n', '~~')).not.toBe('');
 });
 
-// ── Pandoc fenced divs: the fence line is recognised and marked.
-test('fenced div fence is recognised and marked', () => {
-  expect(classesAt('intro\n\n:::note\ndivcontent\n:::\n', ':::')).not.toBe('');
+// ── Pandoc fenced divs (`:::{.theorem}`): the colon fence is marked. The
+// `{.theorem}` attribute spec is parsed by the host latex grammar as a brace
+// group (so braces highlight; the class is group text, not yet a className —
+// that would need latex-grammar-level fence recognition).
+test('fenced div colon fence is marked', () => {
+  const doc = 'intro\n\n:::{.theorem}\ndivcontent\n:::\n';
+  expect(classesAt(doc, ':::')).toContain('meta');
 });
 
 // ── Underscore emphasis (the '_' passthrough token).
@@ -77,7 +81,8 @@ test('underscore emphasis is highlighted', () => {
 // (raw commands, math) just like outside, including when nested — so a lemma in
 // a proof highlights correctly.
 test('fenced div internals parse as full latex, including nested divs', () => {
-  const doc = ':::lemma\n\\textbf{bold} and $x^2$ here\n\n:::proof\ninner \\alpha text\n:::\n:::\n';
+  const doc =
+    ':::{.lemma}\n\\textbf{bold} and $x^2$ here\n\n:::{.proof}\ninner \\alpha text\n:::\n:::\n';
   expect(classesAt(doc, '\\textbf')).toContain('strong'); // latex command inside div
   expect(classesAt(doc, 'x^2')).not.toBe(''); // math inside div
   expect(classesAt(doc, '\\alpha')).toContain('keyword'); // latex inside NESTED div
@@ -88,7 +93,7 @@ test('fenced div internals parse as full latex, including nested divs', () => {
 // is usable for latex-in-markdown, not just pure .tex.
 test('linter does not flag a normal pandoc-markdown document', () => {
   const doc =
-    '# Heading\n\nProse with *emphasis*, a [link](http://u), and $\\zeta(2) = \\pi^2/6$.\n\n- item one\n- item two\n\n:::note\nA remark with $x^2$.\n:::\n';
+    '# Heading\n\nProse with *emphasis*, a [link](http://u), and $\\zeta(2) = \\pi^2/6$.\n\n- item one\n- item two\n\n:::{.note}\nA remark with $x^2$.\n:::\n';
   const state = EditorState.create({ doc, extensions: [latexLanguage] });
   const diagnostics = latexLinter({ checkMissingDocumentEnv: false })(
     { state } as never,
