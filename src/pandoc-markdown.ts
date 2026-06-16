@@ -53,6 +53,79 @@ export const markdownFoldService = foldService.of(
   },
 );
 
+// ── Document outline (headings + fenced divs) ──────────────────────────────
+const CLASS_ATTR_RE = /\.([A-Za-z][\w-]*)/; // first `.class` in a div attr spec
+const TITLE_ATTR_RE = /title="([^"]*)"/; // a div `title="…"` attribute
+
+export interface OutlineItem {
+  kind: 'heading' | 'div';
+  level: number; // heading level (1–6), or the div's nesting level (1+)
+  depth: number; // indentation depth for the outline panel
+  label: string;
+  line: number; // 1-based line number of the entry
+}
+
+function capitalize(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+// Build a document outline from heading lines and fenced-div opening fences,
+// reusing the SAME detection (HEADING_RE / FENCE_RE) the fold service uses so the
+// two stay consistent. A div renders by its class with its title appended:
+// `:::{.remark}` -> "Remark", `:::{.remark title="ABCD"}` -> "Remark: ABCD".
+// Depth indents headings by their hierarchy and divs one step under the heading
+// they fall within (deeper for nested divs).
+export function markdownOutline(doc: string): OutlineItem[] {
+  const lines = doc.split('\n');
+  const items: OutlineItem[] = [];
+  const headingLevels: number[] = []; // levels of the enclosing headings
+  let openDivs = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const text = lines[i];
+
+    const h = HEADING_RE.exec(text);
+    if (h) {
+      const level = h[1].length;
+      while (
+        headingLevels.length &&
+        headingLevels[headingLevels.length - 1] >= level
+      ) {
+        headingLevels.pop();
+      }
+      const depth = headingLevels.length;
+      headingLevels.push(level);
+      items.push({
+        kind: 'heading',
+        level,
+        depth,
+        label: text.slice(h[0].length).trim(),
+        line: i + 1,
+      });
+      continue;
+    }
+
+    const f = FENCE_RE.exec(text);
+    if (!f) continue;
+    const attrs = f[2].trim();
+    if (attrs === '') {
+      if (openDivs > 0) openDivs--; // closing fence
+      continue;
+    }
+    const cls = CLASS_ATTR_RE.exec(attrs);
+    const title = TITLE_ATTR_RE.exec(attrs);
+    const name = cls ? capitalize(cls[1]) : 'Div';
+    items.push({
+      kind: 'div',
+      level: openDivs + 1,
+      depth: headingLevels.length + openDivs,
+      label: title ? `${name}: ${title[1]}` : name,
+      line: i + 1,
+    });
+    openDivs++;
+  }
+  return items;
+}
+
 const COLON = 58; // ':'
 
 // Pandoc fenced divs — `:::{.theorem}` opens (3+ colons), a line of 3+ colons
