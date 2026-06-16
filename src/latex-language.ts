@@ -16,7 +16,7 @@ import { latexCompletionSource } from './completion';
 import { autoCloseTags } from './auto-close-tags';
 import { latexLinter, LatexLinterOptions } from './linter';
 import { latexHoverTooltip } from './tooltips';
-import { markdownProseWrap } from './pandoc-markdown';
+import { markdownProseWrap, markdownFoldService } from './pandoc-markdown';
 
 // Simple bracket matching for LaTeX
 export const latexBracketMatching = bracketMatching({
@@ -74,6 +74,9 @@ function commentFoldRanges(state: any, lineStart: number, lineEnd: number) {
   return null;
 }
 
+// Paragraph / SubParagraph are deliberately excluded: paragraphs must never
+// fold (and the mounted markdown overlay's paragraph nodes are also named
+// "Paragraph", which previously made every prose paragraph fold).
 const SECTION_RANK: Record<string, number> = {
   Book: 0,
   Part: 1,
@@ -81,8 +84,6 @@ const SECTION_RANK: Record<string, number> = {
   Section: 3,
   SubSection: 4,
   SubSubSection: 5,
-  Paragraph: 6,
-  SubParagraph: 7,
 };
 
 // Fold books, parts, chapters, sections, and paragraphs
@@ -153,6 +154,7 @@ export const latexLanguage = LRLanguage.define({
         Environment: foldInside,
         KnownEnvironment: foldInside,
         Group: foldInside,
+        DollarMath: foldInside,
         DocumentEnvironment: foldInside,
         TabularEnvironment: foldInside,
         EquationEnvironment: foldInside,
@@ -167,9 +169,7 @@ export const latexLanguage = LRLanguage.define({
         Chapter: foldInside,
         Section: foldInside,
         SubSection: foldInside,
-        SubSubSection: foldInside,
-        Paragraph: foldInside,
-        SubParagraph: foldInside
+        SubSubSection: foldInside
       }),
       styleTags({
         // Control sequences
@@ -327,6 +327,7 @@ export function latex(config: {
   extensions.push(foldService.of(preambleFoldRanges));
   extensions.push(foldService.of(commentFoldRanges));
   extensions.push(foldService.of(sectionFoldRanges));
+  extensions.push(markdownFoldService);
 
   // Add autocomplete extension
   if (options.enableAutocomplete) {

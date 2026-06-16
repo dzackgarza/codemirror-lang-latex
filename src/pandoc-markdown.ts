@@ -8,7 +8,50 @@ import { parseMixed } from '@lezer/common';
 import type { SyntaxNodeRef } from '@lezer/common';
 import type { MarkdownConfig, MarkdownParser, BlockContext, Line } from '@lezer/markdown';
 import { tags as t } from '@lezer/highlight';
+import { foldNodeProp, foldService } from '@codemirror/language';
+import type { EditorState } from '@codemirror/state';
 import { markdownLanguage } from '@codemirror/lang-markdown';
+
+const HEADING_RE = /^(#{1,6})\s/;
+const FENCE_RE = /^(:{3,})(.*)$/;
+
+// Fold the pandoc-markdown block constructs that have an opening marker and a
+// matching/closing boundary: ATX headings (to the next heading of same-or-higher
+// level, else end of document) and fenced divs (to the matching closing fence,
+// depth-counted for nesting). Paragraphs are deliberately never folded.
+export const markdownFoldService = foldService.of(
+  (state: EditorState, lineStart: number) => {
+    const line = state.doc.lineAt(lineStart);
+    const text = line.text;
+
+    const h = HEADING_RE.exec(text);
+    if (h) {
+      const level = h[1].length;
+      for (let n = line.number + 1; n <= state.doc.lines; n++) {
+        const hn = HEADING_RE.exec(state.doc.line(n).text);
+        if (hn && hn[1].length <= level) {
+          return { from: line.to, to: state.doc.line(n).from - 1 };
+        }
+      }
+      const last = state.doc.line(state.doc.lines);
+      return last.to > line.to ? { from: line.to, to: last.to } : null;
+    }
+
+    const f = FENCE_RE.exec(text);
+    if (f && f[2].trim() !== '') {
+      let depth = 1;
+      for (let n = line.number + 1; n <= state.doc.lines; n++) {
+        const fn = FENCE_RE.exec(state.doc.line(n).text);
+        if (!fn) continue;
+        if (fn[2].trim() !== '') depth++;
+        else if (--depth === 0) {
+          return { from: line.to, to: state.doc.line(n).from - 1 };
+        }
+      }
+    }
+    return null;
+  },
+);
 
 const COLON = 58; // ':'
 
@@ -40,7 +83,12 @@ const FencedDiv: MarkdownConfig = {
   ],
 };
 
-const markdownParser = (markdownLanguage.parser as MarkdownParser).configure([FencedDiv]);
+const markdownParser = (markdownLanguage.parser as MarkdownParser).configure([
+  FencedDiv,
+  // lang-markdown's foldNodeProp folds every non-heading/non-list block,
+  // including Paragraph. Paragraphs must never fold — override that to null.
+  { props: [foldNodeProp.add({ Paragraph: () => null })] },
+]);
 
 // Node names the LaTeX grammar emits for text it passes through verbatim — the
 // runs where markdown applies. Hash ("#") is added by the grammar so ATX
