@@ -16,6 +16,7 @@ import { latexCompletionSource } from './completion';
 import { autoCloseTags } from './auto-close-tags';
 import { latexLinter, LatexLinterOptions } from './linter';
 import { latexHoverTooltip } from './tooltips';
+import { markdownProseWrap } from './pandoc-markdown';
 
 // Simple bracket matching for LaTeX
 export const latexBracketMatching = bracketMatching({
@@ -258,7 +259,8 @@ export const latexLanguage = LRLanguage.define({
         BibliographyCtrlSeq: t.heading,
         BibliographyStyleCtrlSeq: t.heading
       })
-    ]
+    ],
+    wrap: markdownProseWrap
   }),
   languageData: {
     commentTokens: { line: "%" },

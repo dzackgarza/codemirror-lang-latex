@@ -163,6 +163,7 @@
 
     Ampersand { "&" }
     Tilde { "~" }
+    Hash { "#" }
 
     EnvName {  $[a-zA-Z]+ $[*]? }
 }
@@ -228,7 +229,7 @@ DefinitionArgument {
 }
 
 MacroParameter {
-    "#" ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
+    Hash ("1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9")
 }
 
 OptionalMacroParameter {
@@ -463,6 +464,7 @@ textBase {
     | Whitespace
     | Ampersand
     | Tilde
+    | Hash
     )
 }
 
@@ -527,7 +529,6 @@ LongArg {
     | KnownEnvironment
     | Environment
     | BlankLine
-    | "#" // macro character
     | "_" | "^" // other math chars
     )*
 }
@@ -539,7 +540,6 @@ ShortTextArgument {
 ShortArg {
     ( textWithBrackets
     | NonEmptyGroup<ShortArg>
-    | "#" // macro character
     | "_" | "^" // other math chars
     )*
 }
@@ -547,7 +547,6 @@ ShortArg {
 ShortOptionalArg {
     ( textBase
     | NonEmptyGroup<ShortOptionalArg>
-    | "#" // macro character
     | "_" // underscore is used in some parameter names
     )*
 }
@@ -555,7 +554,6 @@ ShortOptionalArg {
 TikzPictureContent {  /// same as Text but with added allowed characters
     ( textWithEnvironmentsAndBlankLines
     | NonEmptyGroup<TikzPictureContent>
-    | "#" // macro character
     | "_" | "^" // other math chars
     )+
 }
@@ -578,7 +576,7 @@ DefinitionFragment {
     | Whitespace
     | OpenBracket
     | CloseBracket
-    | "#" // macro character
+    | Hash // macro character
     | Ampersand // for tables
     | Tilde // unbreakable space
     | "_" | "^" // other math chars

@@ -12,6 +12,7 @@ export default [
     },
     external: [
       '@codemirror/autocomplete',
+      '@codemirror/lang-markdown',
       '@codemirror/language',
       '@codemirror/lint',
       '@codemirror/state',
@@ -19,6 +20,7 @@ export default [
       '@lezer/common',
       '@lezer/highlight',
       '@lezer/lr',
+      '@lezer/markdown',
       'tslib'
     ],
     plugins: [
