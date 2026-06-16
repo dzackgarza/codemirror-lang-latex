@@ -10,6 +10,7 @@ import { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { linter } from '@codemirror/lint';
 import { closeBrackets } from '@codemirror/autocomplete';
+import { mathCloseBrackets } from './math-close-brackets';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
 import { latexCompletionSource } from './completion';
@@ -343,6 +344,9 @@ export function latex(config: {
   extensions.push(latexBracketMatching);
 
   if (options.autoCloseBrackets) {
+    // Math-delimiter auto-close runs first; it defers (returns false) for any
+    // input it does not own, so stock bracket-closing still handles `(`/`[`/`{`.
+    extensions.push(mathCloseBrackets);
     extensions.push(closeBrackets());
   }
 

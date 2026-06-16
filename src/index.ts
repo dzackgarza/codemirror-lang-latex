@@ -36,3 +36,6 @@ export { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 
 // Pandoc-markdown document outline (headings + fenced divs)
 export { markdownOutline, type OutlineItem } from './pandoc-markdown';
+
+// Math-delimiter auto-close ($…$, $$…$$, \(…\), \[…\])
+export { mathInsertBracket, mathCloseBrackets } from './math-close-brackets';
