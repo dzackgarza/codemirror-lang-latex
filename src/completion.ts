@@ -53,6 +53,20 @@ export function inMathMode(
     const ch = textBefore[i];
     const prev = i > 0 ? textBefore[i - 1] : '';
 
+    // In markdown, inline math ($…$, $$…$$, \(…\), \[…\]) is paragraph-scoped: an
+    // unterminated delimiter does NOT leak across a blank line. So a blank line
+    // (\n\n) resets the inline-math state — otherwise a stray opening `$` in an
+    // earlier paragraph would flip the parity of every later paragraph. LaTeX
+    // environments (\begin/\end) legitimately span paragraphs, so envStack is NOT
+    // reset here.
+    if (ch === '\n' && prev === '\n') {
+      inDollar = false;
+      inDoubleDollar = false;
+      inParen = false;
+      inBracket = false;
+      continue;
+    }
+
     if (prev === '\\' && (ch === '$' || ch === '(' || ch === ')' || ch === '[' || ch === ']' || ch === '\\')) {
       if (ch === '\\') {
         continue;
