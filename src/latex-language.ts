@@ -350,7 +350,16 @@ export function latex(config: {
       ],
       defaultKeymap: true,
       activateOnTyping: true,
-      icons: true
+      icons: true,
+      // interactionDelay is CM6's anti-misclick guard: acceptCompletion (the
+      // Enter command) is a no-op while the tooltip has been open for less than
+      // this many ms, so an accept fired immediately after the tooltip opens is
+      // silently dropped. This editor triggers completion explicitly and accepts
+      // it deterministically via the Enter command; the misclick guard makes
+      // that accept racy (it fires whenever the open->accept gap happens to fall
+      // under the delay). Setting it to 0 makes Enter-accept apply as soon as a
+      // completion is open — the behavior the editor actually wants.
+      interactionDelay: 0
     }));
     extensions.push(keymap.of(completionKeymap));
   }
