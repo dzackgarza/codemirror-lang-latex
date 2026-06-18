@@ -9,7 +9,7 @@ export {
 } from './latex-language';
 
 // Import and re-export from completion
-export { latexCompletionSource } from './completion';
+export { latexCompletionSource, inMathMode } from './completion';
 
 // Export the linter
 export { latexLinter, type LatexLinterOptions } from './linter';

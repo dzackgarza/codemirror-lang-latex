@@ -31,9 +31,17 @@ const MATH_ONLY_ENVIRONMENTS = [
   'cases', 'split', 'array'
 ];
 
-// Checks if we're in math mode
-function isInMathMode(context: CompletionContext): boolean {
-  const textBefore = context.state.sliceDoc(0, context.pos);
+// Checks if we're in math mode at a position in an editor state, given only the
+// document text and a cursor position — no CompletionContext required. This is
+// the canonical prose/math-zone detector (OSOT): the completion source below and
+// the app's snippet-mode gate both call it, so there is exactly one detector.
+// `state` is anything exposing `sliceDoc(from, to)` (an EditorState); `pos` is
+// the cursor offset whose enclosing zone is classified.
+export function inMathMode(
+  state: { sliceDoc(from: number, to: number): string },
+  pos: number,
+): boolean {
+  const textBefore = state.sliceDoc(0, pos);
 
   let inDollar = false;
   let inDoubleDollar = false;
@@ -89,6 +97,12 @@ function isInMathMode(context: CompletionContext): boolean {
     return true;
   }
   return envStack.some(env => MATH_ENVIRONMENTS.includes(env));
+}
+
+// CompletionContext-shaped adapter over the canonical {@link inMathMode}
+// detector, for the completion source's existing call sites.
+function isInMathMode(context: CompletionContext): boolean {
+  return inMathMode(context.state, context.pos);
 }
 
 // LaTeX environment names for autocompletion
